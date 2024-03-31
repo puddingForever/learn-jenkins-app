@@ -2,69 +2,88 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Available Scripts
+### How to run Docker Container in Jenkins 
 
-In the project directory, you can run:
+This project is node.js. So we need node runtime environment to run javascript. However, Jenkins does not provide default node environment, Therefore we will be using docker container<br>
+<br>
+dashboard - > Jenkins setting -> plugin -> docker pipeline <br>
 
-### `npm start`
+Then , we are able to use docker container in pippeline 
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```
+pipeline{
+    agent any
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+    stages{
+        stage('w/ docker'){
+            agent{
+                docker{
+                    image 'node:18-alpine'
+                }
+            }
+        }
+    }
 
-### `npm test`
+}
+```
+docker will pull the image if it has not been installed.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Workspace synchronization
+when using docker, I used agent stage twice and it made my workspace created seperately <br>
+To avoid that, we can use reuseNode true.
 
-### `npm run build`
+```
+pipeline {
+    agent any
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+    stages {
+        stage('w/o docker') {
+            steps {
+                sh '''
+                    echo "without docker"
+                    ls -la
+                    touch container-no.txt
+                    '''
+            }
+        }
+        
+         stage('w/ docker') {
+             agent{
+                 docker{
+                     image 'node:18-alpine'
+                     reuseNode true
+                 }
+             }
+            steps {
+                sh '''
+                    echo "with docker"
+                    ls -la   
+                    touch container-yes.txt
+                '''
+            }
+        }
+        
+    }
+}
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+![image](https://github.com/vdespa/learn-jenkins-app/assets/126591306/2ac06aac-c6cf-439a-829f-7915676e2729)
 
-### `npm run eject`
+### Using a git Repository in jenkins 
+create Jenkinsfile in root directory on workspace <br>
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+![image](https://github.com/vdespa/learn-jenkins-app/assets/126591306/6c80a1fd-d789-46cf-abef-109b3d8545f2)
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Then, Write the pipeline that you want to buid in Jenkinsfile<br>
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+After that, go to Jenkins , 
+In the configure -> pipeline, simply switch definition pipeline to "pipeline script from scm(Source Code Management)" <br>
+Then write as follows 
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+![image](https://github.com/vdespa/learn-jenkins-app/assets/126591306/95b7b969-cdea-4fb7-88b0-c7729edc20fd) <br>
+![image](https://github.com/vdespa/learn-jenkins-app/assets/126591306/95b16bc5-78c4-4c1d-a260-ddefeeb36d32)
 
-## Learn More
+After completing everything, build Jenkins and it's complete.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+If we have changes in Jenkinsfile, push to git again and build again. 
